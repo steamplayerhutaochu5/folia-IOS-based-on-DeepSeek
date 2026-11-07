@@ -139,6 +139,11 @@ final class FoliaLocalAudioServer {
                 if errno == EINTR { continue }
                 break
             }
+            // WKWebView 会在 canplay / seek / 切歌时提前关掉音频连接。若继续往已关闭的
+            // TCP socket 写，Darwin 默认会发 SIGPIPE 直接杀掉进程——现象就是「刚出声就闪退」。
+            // SO_NOSIGPIPE 让 send() 返回 -1，relay 据此停止写并关闭连接。
+            var noSigPipe: Int32 = 1
+            setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
             connectionQueue.async { [weak self] in
                 self?.handle(fd: client)
             }
@@ -423,7 +428,7 @@ private final class FoliaRemoteAudioRelay: NSObject, URLSessionDataDelegate {
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        guard !isHead, !data.isEmpty else { return }
+        guard !finished, !isHead, !data.isEmpty else { return }
         if !foliaWriteAll(fd: fd, data: data) {
             session.invalidateAndCancel()
             finish()
