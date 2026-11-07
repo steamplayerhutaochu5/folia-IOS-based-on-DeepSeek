@@ -8,14 +8,17 @@
 
 Lyrics Reimagined // 辞曲新境 · iOS 非官方移植
 
+[![version](https://img.shields.io/badge/version-0.7.20--ios.1-blue)](#当前版本与下载)
 [![License](https://img.shields.io/github/license/chthollyphile/folia-major)](https://github.com/chthollyphile/folia-major/blob/main/LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![iOS](https://img.shields.io/badge/iOS-15%2B%20%C2%B7%20tested%20on%2027-000000?logo=apple&logoColor=white)](#)
+[![iOS](https://img.shields.io/badge/iOS-15%2B%20%C2%B7%20tested%20on%2027.0.1-000000?logo=apple&logoColor=white)](#)
 [![Build](https://img.shields.io/badge/build-GitHub%20Actions%20%C2%B7%20unsigned%20ipa-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ios-ipa.yml)
 
-[项目定位](#项目定位)
+[当前版本](#当前版本与下载)
 ·
 [功能状态](#功能状态)
+·
+[与 Android 的差异](#与-android-版的差异)
 ·
 [构建与安装](#构建与安装)
 ·
@@ -23,7 +26,7 @@ Lyrics Reimagined // 辞曲新境 · iOS 非官方移植
 ·
 [已知限制](#已知限制)
 ·
-[免责声明](#法律与免责声明)
+[更新日志](#更新日志)
 
 </div>
 
@@ -54,6 +57,15 @@ Folia 是一个以全屏沉浸式歌词为核心的在线音乐播放器，支�
 
 > 构建细节、方法映射与限制清单见 [docs/IOS_PORT.md](docs/IOS_PORT.md)。
 
+## 当前版本与下载
+
+**当前版本：`0.7.20-ios.1`**（首个 iOS 测试发行版，在 iPhone 17,4 / iOS 27.0.1 上实测）。
+
+- 下载：[Releases 页面](https://github.com/steamplayerhutaochu5/folia-IOS-based-on-DeepSeek/releases/latest) 中的 `Folia-unsigned.ipa`；
+- 这是**未签名**包，不能直接安装，必须先用 Apple ID / 开发者证书签名（见 [安装](#3-安装到-iphone--ipad)）；
+- 版本号同时写入 `package.json` 与 iOS 工程的 `MARKETING_VERSION`；
+- 同一版本的源码、构建日志和校验值见对应 Release 说明。
+
 ## 架构
 
 ```text
@@ -64,7 +76,7 @@ FoliaNativePlugin.swift
   ├── FoliaCookieJar        Cookie 持久化 + WKHTTPCookieStore 镜像
   ├── URLSession            httpRequest：Cookie 注入、超时、可选禁重定向、Set-Cookie 回写
   ├── UIDocumentPicker      pickAudioFiles / pickAudioFolder → Documents/imported-audio
-  ├── FoliaLocalAudioServer 127.0.0.1 HTTP 服务：Range / HEAD / OPTIONS / CORS
+  ├── FoliaLocalAudioServer 127.0.0.1 HTTP 服务：Range / HEAD / OPTIONS / CORS / 流式转发
   ├── FoliaMediaSession     AVAudioSession + Now Playing + 远程控制
   └── FoliaDiagnostics      Documents/diagnostics 诊断落盘
 ```
@@ -75,14 +87,30 @@ FoliaNativePlugin.swift
 | --- | --- | --- |
 | 在线搜索与播放 | ✅ | 网易云 / QQ / 酷狗，网络请求走原生桥 |
 | 扫码 / 网页登录 | ✅ | Cookie 保存在原生仓库 |
-| 全屏歌词与动画 | ✅ | 复用 Web 端可视化；iOS 内存上限需实测 |
+| 全屏歌词与动画 | ✅ | 复用 Web 端可视化 |
 | 本地音乐（Files 导入） | ✅ | 文件复制进 App 私有目录，通过本地 HTTP 播放 |
 | 屏幕常亮 | ✅ | `UIApplication.isIdleTimerDisabled` |
 | 锁屏 / 控制中心 | ✅ | 元数据 + 播放/暂停/上一首/下一首 |
-| 后台播放 | ⚠️ | 已配置 `UIBackgroundModes: audio`，真机续播能力待验证 |
+| 后台 / 息屏播放 | ⚠️ | 已配置 `UIBackgroundModes: audio` 并在切后台时重申会话；真机续播仍在验证 |
 | 设备音乐库扫描 | ❌ | iOS 没有 Android MediaStore 的等价能力 |
 | 手机适配 / 沉浸式 / 灵动岛歌词 | ❌ | Android 窗口特性，iOS 侧不适用 |
 | 未签名 ipa 构建 | ✅ | GitHub Actions `macos-26` / `xcode-27` |
+
+## 与 Android 版的差异
+
+两端共用同一套 Web 前端与 `FoliaNative` 桥协议，但原生实现按平台重写：
+
+| 能力 | Android | iOS |
+| --- | --- | --- |
+| 网络栈 | OkHttp + `CookieManager` | `URLSession` + 自建 Cookie 仓库 |
+| 本地音频服务 | Java `LocalAudioServer` | Swift POSIX socket + 流式转发 |
+| 媒体控制 | 前台服务 + 通知栏 MediaSession | `AVAudioSession` + Now Playing + 远程控制，无通知栏 |
+| 后台播放 | 前台服务保活 + WakeLock / WifiLock | `UIBackgroundModes: audio`，无前台服务 |
+| 文件导入 | SAF 选择文件/目录 + MediaStore 扫描 | `UIDocumentPicker` 复制副本，无 MediaStore |
+| 挖孔 / 沉浸式 / 方向锁定 | 原生窗口适配 | 由系统安全区接管，相关设置入口隐藏 |
+| 程序化退出 / 退到后台 | 支持 | iOS 不允许，方法为空实现 |
+| 厂商歌词桥（ColorOS） | 支持 | 未实现，只做系统 Now Playing |
+| 分发 | Gradle 构建 APK | Xcode/SPM 构建未签名 IPA，需自签 |
 
 ## 构建与安装
 
@@ -93,8 +121,6 @@ FoliaNativePlugin.swift
 - runner 可选 `macos-26`（Xcode 26 GA，稳定）或 `xcode-27`（preview，iOS 27 SDK）；
 - 构建产物 `Folia-unsigned.ipa` 以 artifact 形式提供，保留 30 天；
 - 工作流定义：[.github/workflows/ios-ipa.yml](.github/workflows/ios-ipa.yml)。
-
-本仓库的 `main` 分支已经配置好该工作流，也可以手动触发：
 
 ```text
 Actions → iOS unsigned IPA → Run workflow
@@ -120,16 +146,15 @@ cd build && zip -qry Folia-unsigned.ipa Payload
 
 ### 3. 安装到 iPhone / iPad
 
-未签名 ipa 不能直接安装，必须签名。免费 Apple ID 方案：
+未签名 ipa 不能直接安装，必须签名。以下任选一种：
 
-1. Windows 安装 [Sideloadly](https://sideloadly.io/) 或 AltStore，并准备 Apple ID；
-2. 用 USB 连接设备，把 `Folia-unsigned.ipa` 拖进 Sideloadly；
-3. 输入 Apple ID 签名并安装（bundle id：`top.izuna.foliamajor`）；
-4. iPhone：设置 → 通用 → VPN 与设备管理 → 信任开发者证书；
-5. 设置 → 隐私与安全性 → 开发者模式 → 打开并重启。
+- **iLoader**：打开 iLoader，导入 `Folia-unsigned.ipa`，签名并安装；
+- **Sideloadly**：USB 连接设备，把 ipa 拖入 Sideloadly，输入 Apple ID 签名安装；
+- **AltStore**：通过 AltServer 安装；
+- 有开发者账号时，也可以在 Xcode 的 `Signing & Capabilities` 中选择 Team 后直接 Run 到真机。
 
-免费证书 7 天有效，到期需要重新签名；付费开发者账号可延长到 1 年。
-若使用付费证书，也可以直接在 Xcode 的 `Signing & Capabilities` 里选择 Team 后安装到真机。
+安装后如需手动信任：设置 → 通用 → VPN 与设备管理 → 信任开发者证书；并开启 设置 → 隐私与安全性 → 开发者模式。
+免费 Apple ID 证书 7 天有效，到期需要重新签名；付费开发者账号可延长到 1 年。
 
 ## 开发说明
 
@@ -168,15 +193,30 @@ npm run typecheck         # TypeScript 类型检查
 - 新增原生能力时，先对齐 Android 的 `FoliaNativePlugin` 方法名与返回结构，再实现 Swift 侧；
 - Swift 方法需要 `@objc`，并同时登记到 `pluginMethods`；
 - 自定义插件不在 `node_modules`，由 `FoliaBridgeViewController.capacitorDidLoad()` 显式注册；
-- 新增 Swift 文件时，需要同时更新 `project.pbxproj` 的 `PBXBuildFile`、`PBXFileReference`、`PBXGroup`、`PBXSourcesBuildPhase`。
+- 新增 Swift 文件时，需要同时更新 `project.pbxproj` 的 `PBXBuildFile`、`PBXFileReference`、`PBXGroup`、`PBXSourcesBuildPhase`；
+- 诊断文件写入 App 的 `Documents/diagnostics`，可通过「设置 → 帮助 → 导出诊断数据」取出。
 
 ## 已知限制
 
-- **后台播放**：WKWebView 的音频在 App 进入后台后可能被系统挂起；当前配置了后台音频模式，但是否续播需要真机验证。若失败，后续需要增加原生 `AVPlayer` 播放通道。
-- **本地音频跨源**：页面源是 `capacitor://localhost`，`<audio>` 请求 `http://127.0.0.1:<port>` 属于跨源，服务端已返回 `Access-Control-Allow-Origin: *`，`Info.plist` 已允许本地网络；若 iOS 27 收紧策略需要另做方案。
+- **后台 / 息屏播放**：iOS 的 WKWebView 在切后台后可能被系统暂停媒体；当前已声明后台音频模式并在切后台时重申 `AVAudioSession`，但仍需真机确认。若最终无法维持，需要增加原生 `AVPlayer` 后台播放通道。
+- **本地音频跨源**：页面源是 `capacitor://localhost`，`<audio>` 请求 `http://127.0.0.1:<port>` 属于跨源，服务端已返回 `Access-Control-Allow-Origin: *`，`Info.plist` 已允许本地网络。
 - **内存**：iOS 的 WKWebView 内存上限低于桌面，部分 3D 可视化主题可能触顶崩溃，需要按崩溃日志做视觉降级。
 - **设备音乐库**：iOS 不支持扫描系统音乐库，本地音乐只能通过「文件」App 导入。
+- **厂商特性**：ColorOS 歌词、通知栏播放卡片、挖孔/沉浸式布局在 iOS 上没有对应实现。
 - **分发**：第三方音乐接口与内容版权风险由使用者承担，不建议也不能上架 App Store。
+
+## 更新日志
+
+### 0.7.20-ios.1（首个 iOS 发行版）
+
+- 新增 Capacitor iOS 容器（SPM、UIScene 模板、共享 scheme）与 GitHub Actions 未签名 ipa 构建；
+- 实现 `FoliaNative` 的 Swift 端：Cookie 仓库、`URLSession` 网络代理、`UIDocumentPicker` 文件导入、本地音频 HTTP 服务、锁屏/控制中心媒体控制、诊断落盘；
+- 本地音频转发改为流式，修复「点击播放长时间无首字节」；
+- 修复 `FoliaDiagnostics` 心跳文件指数膨胀导致的 OOM 闪退（真机 `.ips` 崩溃栈确认）；
+- 修复音频连接被 WebView 提前关闭时写 socket 触发 SIGPIPE 的闪退；
+- 修复 `AVAudioSession`/AudioContext 被中断后「有缓冲但无声、进度不走」；
+- 调整音频会话配置时机（播放前配置、播放中不重配），解决播放几秒后自动暂停；
+- 后台/息屏时重申音频会话（续播能力持续验证中）。
 
 ## Community
 
