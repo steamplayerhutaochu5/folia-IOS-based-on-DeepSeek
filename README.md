@@ -61,7 +61,7 @@ Folia 是一个以全屏沉浸式歌词为核心的在线音乐播放器，支�
 
 **当前版本：`0.7.20-ios.1`**（首个 iOS 测试发行版，在 iPhone 17,4 / iOS 27.0.1 上实测）。
 
-- 下载：[Releases 页面](https://github.com/zhumuzhumuzhumu/folia-IOS-based-on-DeepSeek/releases/latest) 中的 `Folia-unsigned.ipa`；
+- 下载：[Releases 页面](https://github.com/zhumuzhumuzhumu/folia-IOS/releases/latest) 中的 `Folia-unsigned.ipa`；
 - 这是**未签名**包，不能直接安装，必须先用 Apple ID / 开发者证书签名（见 [安装](#3-安装到-iphone--ipad)）；
 - 版本号同时写入 `package.json` 与 iOS 工程的 `MARKETING_VERSION`；
 - 同一版本的源码、构建日志和校验值见对应 Release 说明。
