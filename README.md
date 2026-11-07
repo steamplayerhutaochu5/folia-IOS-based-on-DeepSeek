@@ -61,7 +61,7 @@ Folia 是一个以全屏沉浸式歌词为核心的在线音乐播放器，支�
 
 **当前版本：`0.7.20-ios.1`**（首个 iOS 测试发行版，在 iPhone 17,4 / iOS 27.0.1 上实测）。
 
-- 下载：[Releases 页面](https://github.com/steamplayerhutaochu5/folia-IOS-based-on-DeepSeek/releases/latest) 中的 `Folia-unsigned.ipa`；
+- 下载：[Releases 页面](https://github.com/zhumuzhumuzhumu/folia-IOS-based-on-DeepSeek/releases/latest) 中的 `Folia-unsigned.ipa`；
 - 这是**未签名**包，不能直接安装，必须先用 Apple ID / 开发者证书签名（见 [安装](#3-安装到-iphone--ipad)）；
 - 版本号同时写入 `package.json` 与 iOS 工程的 `MARKETING_VERSION`；
 - 同一版本的源码、构建日志和校验值见对应 Release 说明。
@@ -220,12 +220,12 @@ npm run typecheck         # TypeScript 类型检查
 
 ## 贡献者
 
-本 iOS 移植由 [@steamplayerhutaochu5](https://github.com/steamplayerhutaochu5) 维护，构建流水线与真机测试由其完成；
+本 iOS 移植由 [@zhumuzhumuzhumu](https://github.com/zhumuzhumuzhumu) 维护，构建流水线与真机测试由其完成；
 代码实现过程中使用了 DeepSeek 作为 AI 编码协助（工具，不计入人类贡献者）。
 
 - 上游 Folia：[chthollyphile](https://github.com/chthollyphile)（冬霧）及上游贡献者
 - Android 移植：[whycfawa](https://github.com/whycfawa) 及 folia-android 贡献者
-- iOS 移植与发行：[steamplayerhutaochu5](https://github.com/steamplayerhutaochu5)
+- iOS 移植与发行：[zhumuzhumuzhumu](https://github.com/zhumuzhumuzhumu)
 
 完整名单与各角色说明见 [CONTRIBUTORS.md](CONTRIBUTORS.md)。
 

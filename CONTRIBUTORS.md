@@ -4,7 +4,7 @@
 
 | 角色 | 贡献者 |
 | --- | --- |
-| iOS 移植维护、构建流水线与真机测试 | [@steamplayerhutaochu5](https://github.com/steamplayerhutaochu5) |
+| iOS 移植维护、构建流水线与真机测试 | [@zhumuzhumuzhumu](https://github.com/zhumuzhumuzhumu) |
 | 上游 Folia（Web 前端、播放器、歌词与桌面端） | [@chthollyphile](https://github.com/chthollyphile) 及上游贡献者 |
 | Android 容器与 `FoliaNative` 桥协议 | [@whycfawa](https://github.com/whycfawa) 及 folia-android 贡献者 |
 | 代码实现协助 | DeepSeek（AI 编码工具，不计入人类贡献者） |
