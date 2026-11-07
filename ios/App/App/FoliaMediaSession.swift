@@ -101,16 +101,10 @@ final class FoliaMediaSession {
             }
         }
         if activationObserver == nil {
-            activationObserver = center.addObserver(
-                forName: UIApplication.didBecomeActiveNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self else { return }
-                self.audioSessionConfigured = false
-                self.activateAudioSession()
-                self.notifyAudioSessionResumed()
-            }
+            // 不再监听 didBecomeActive：回前台时重新 setCategory/setActive 会让
+            // WebKit 的媒体会话进入 interrupted（iOS 27 上表现为播放几秒后自动暂停）。
+            // 中断恢复交给下面的 interruptionNotification；普通前后台切换由 WebKit 自己恢复。
+            activationObserver = nil
         }
     }
 
@@ -137,6 +131,16 @@ final class FoliaMediaSession {
         }
     }
 
+    /// App 启动、WebView 开始播放之前就配置好音频会话。
+    ///
+    /// 关键：不能在每次 updatePlaybackState（播放中每秒一次）里 setCategory/setActive ——
+    /// iOS 27 的 WebKit 会因此把 Audio/WebAudio/DOMMediaSession 判为 interrupted，
+    /// 音频播放几秒后自动暂停（真机 syslog 的 MediaSessionManageriOS dump 已确认）。
+    func prepareForPlayback() {
+        configure()
+        activateAudioSession()
+    }
+
     func update(
         title: String,
         artist: String,
@@ -147,7 +151,6 @@ final class FoliaMediaSession {
         durationMs: Double
     ) {
         configure()
-        activateAudioSession()
 
         lastTitle = title
         lastArtist = artist
@@ -168,7 +171,9 @@ final class FoliaMediaSession {
             info[MPMediaItemPropertyArtwork] = artwork
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        MPNowPlayingInfoCenter.default().playbackState = playing ? .playing : .paused
+        // 不设置 MPNowPlayingInfoCenter.playbackState：签名包没有
+        // com.apple.mediaremote.set-playback-state entitlement，iOS 27 会报错并可能
+        // 干扰 WebKit 的媒体会话；playbackRate 已足以表达播放/暂停。
 
         if coverURL != currentCoverURL {
             currentCoverURL = coverURL
@@ -181,9 +186,9 @@ final class FoliaMediaSession {
         artworkTask = nil
         currentCoverURL = ""
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-        MPNowPlayingInfoCenter.default().playbackState = .stopped
         // 不在这里 setActive(false)：JS 在无歌/初始化时会调用 clear，停用会话会让
         // WKWebView 的 AudioContext 进入 interrupted，下一首歌就再也发不出声音。
+        // 也不设置 playbackState（同上：无 entitlement）。
     }
 
     private func artwork(for url: String) -> MPMediaItemArtwork? {
