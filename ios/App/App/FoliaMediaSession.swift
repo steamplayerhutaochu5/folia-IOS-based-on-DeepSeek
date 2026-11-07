@@ -18,6 +18,9 @@ final class FoliaMediaSession {
     weak var plugin: FoliaNativePlugin?
 
     private var commandsConfigured = false
+    private var audioSessionConfigured = false
+    private var interruptionObserver: NSObjectProtocol?
+    private var activationObserver: NSObjectProtocol?
     private var artworkTask: URLSessionDataTask?
     private var artworkCache: [String: MPMediaItemArtwork] = [:]
     private var currentCoverURL = ""
@@ -65,14 +68,70 @@ final class FoliaMediaSession {
             self?.emit("stop")
             return .success
         }
+
+        observeAudioSession()
     }
 
-    /// 激活后台音频会话；失败不抛给 JS —— 前台播放不该因为锁屏权限失败而中断。
+    /**
+     * AVAudioSession 被电话/Siri/其他 App 中断后不会自己回到 active；
+     * WKWebView 的 AudioContext 会一直停在 `interrupted`（有声音缓冲但没有输出、进度不走）。
+     * 这里在中断结束与 App 回前台时重新激活会话，并通知 JS 恢复 AudioContext。
+     */
+    private func observeAudioSession() {
+        let center = NotificationCenter.default
+        if interruptionObserver == nil {
+            interruptionObserver = center.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: AVAudioSession.sharedInstance(),
+                queue: .main
+            ) { [weak self] notification in
+                guard let self else { return }
+                guard let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+                switch type {
+                case .began:
+                    self.audioSessionConfigured = false
+                case .ended:
+                    self.audioSessionConfigured = false
+                    self.activateAudioSession()
+                    self.notifyAudioSessionResumed()
+                @unknown default:
+                    break
+                }
+            }
+        }
+        if activationObserver == nil {
+            activationObserver = center.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.audioSessionConfigured = false
+                self.activateAudioSession()
+                self.notifyAudioSessionResumed()
+            }
+        }
+    }
+
+    private func notifyAudioSessionResumed() {
+        DispatchQueue.main.async { [weak self] in
+            self?.plugin?.notifyListeners("mediaAction", data: ["action": "audio-session-resumed"])
+        }
+    }
+
+    /// 激活后台音频会话。
+    ///
+    /// 只在会话尚未配置时调用：`updatePlaybackState` 每秒都会走到这里，若每次都
+    /// setCategory/setActive，iOS 会反复重配音频路由，WKWebView 的 AudioContext 随之
+    /// 进入 interrupted，表现就是「音频在缓冲、播放键亮着，却没有声音、进度也不走」。
     func activateAudioSession() {
+        guard !audioSessionConfigured else { return }
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true)
+            audioSessionConfigured = true
         } catch {
             // 静默失败：调用方只关心界面上的播放状态。
         }
@@ -123,7 +182,8 @@ final class FoliaMediaSession {
         currentCoverURL = ""
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         MPNowPlayingInfoCenter.default().playbackState = .stopped
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // 不在这里 setActive(false)：JS 在无歌/初始化时会调用 clear，停用会话会让
+        // WKWebView 的 AudioContext 进入 interrupted，下一首歌就再也发不出声音。
     }
 
     private func artwork(for url: String) -> MPMediaItemArtwork? {

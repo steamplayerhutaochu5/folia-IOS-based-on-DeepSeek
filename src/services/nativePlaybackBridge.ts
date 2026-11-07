@@ -91,6 +91,12 @@ export const installNativePlaybackBridge = async (
   try {
     await plugin.addListener('mediaAction', ({ action }) => {
       if (!action) return;
+      // iOS 的 AVAudioSession 中断结束/回前台时，原生会发这个 action。
+      // 它不属于媒体按钮，单独转成一个事件，让播放 transport 恢复 AudioContext。
+      if (action === 'audio-session-resumed') {
+        window.dispatchEvent(new CustomEvent('folia-native-audio-session-resumed'));
+        return;
+      }
       window.dispatchEvent(new CustomEvent('folia-native-media-action', {
         detail: { action },
       }));

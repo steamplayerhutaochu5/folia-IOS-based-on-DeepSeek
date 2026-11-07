@@ -12,7 +12,7 @@
     "scrollEnabled": true,
     "limitsNavigationsToAppBoundDomains": false,
     "backgroundColor": "#09090b",
-    "appendUserAgent": "Folia-iOS"
+    "appendUserAgent": "Folia-iOS/2"
   },
   "server": {
     "androidScheme": "https",

@@ -74,6 +74,26 @@ export function usePlaybackTransportController({
         wantsPlayback.current = false;
     }, []);
 
+    /**
+     * iOS 的 AVAudioSession 中断结束后，WKWebView 的 AudioContext 经常停在 `interrupted`：
+     * 音频元素还在缓冲、播放键也亮着，但没有输出、进度也不走。原生恢复会话后会发这个事件，
+     * 这里重新 resume 音频图，并把本应继续播放的曲目续上。
+     */
+    useEffect(() => {
+        const handleAudioSessionResumed = () => {
+            const context = audioContextRef.current;
+            if (context && context.state !== 'running') {
+                void context.resume().catch(() => undefined);
+            }
+            const audio = audioRef.current;
+            if (audio && wantsPlayback.current && audio.paused && !audio.ended) {
+                void audio.play().catch(() => undefined);
+            }
+        };
+        window.addEventListener('folia-native-audio-session-resumed', handleAudioSessionResumed);
+        return () => window.removeEventListener('folia-native-audio-session-resumed', handleAudioSessionResumed);
+    }, [audioContextRef, audioRef]);
+
     const resumePlayback = useCallback(async () => {
         if (isNowPlayingStageActive) {
             return;
