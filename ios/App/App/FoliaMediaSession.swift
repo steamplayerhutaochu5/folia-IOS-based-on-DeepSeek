@@ -21,6 +21,8 @@ final class FoliaMediaSession {
     private var audioSessionConfigured = false
     private var interruptionObserver: NSObjectProtocol?
     private var activationObserver: NSObjectProtocol?
+    private var backgroundObserver: NSObjectProtocol?
+    private var foregroundObserver: NSObjectProtocol?
     private var artworkTask: URLSessionDataTask?
     private var artworkCache: [String: MPMediaItemArtwork] = [:]
     private var currentCoverURL = ""
@@ -105,6 +107,39 @@ final class FoliaMediaSession {
             // WebKit 的媒体会话进入 interrupted（iOS 27 上表现为播放几秒后自动暂停）。
             // 中断恢复交给下面的 interruptionNotification；普通前后台切换由 WebKit 自己恢复。
             activationObserver = nil
+        }
+        if backgroundObserver == nil {
+            // 进入后台/息屏时重申音频会话是 active 的：Info.plist 已有
+            // UIBackgroundModes: audio，但 WKWebView 的 WebContent 在切换后台时
+            // 可能把会话标记为 interrupted 并暂停 <audio>；重新 setActive 让它保持激活。
+            backgroundObserver = center.addObserver(
+                forName: UIApplication.didEnterBackgroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.keepAudioSessionActive()
+            }
+        }
+        if foregroundObserver == nil {
+            // 回前台只通知 JS 恢复 AudioContext/续播，不重配 AVAudioSession。
+            foregroundObserver = center.addObserver(
+                forName: UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.notifyAudioSessionResumed()
+            }
+        }
+    }
+
+    /// 后台/息屏时保持 AVAudioSession active，但不改 category，避免 WebKit 媒体会话被中断。
+    func keepAudioSessionActive() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setActive(true)
+            audioSessionConfigured = true
+        } catch {
+            // 保持失败时交给 interruption 通知在系统恢复后重试。
         }
     }
 
