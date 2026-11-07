@@ -9,6 +9,9 @@ import Darwin
 //   /audio/imported-<name>   本地导入副本
 //   /remote-audio/<token>    带 Cookie/Referer 的远端音频转发（酷我/网易等 CDN 不下发 CORS）
 // 必须支持 Range、HEAD 与 OPTIONS，否则 <audio> 会在拖动进度或 CORS 预检时失败。
+//
+// 远端转发是流式的（URLSessionDataDelegate 逐块写回），不是「整首下载完再回」：
+// 后者会让点击播放后长时间没有首字节，听感上就是「按了没反应」。
 
 final class FoliaLocalAudioServer {
     static let shared = FoliaLocalAudioServer()
@@ -143,37 +146,46 @@ final class FoliaLocalAudioServer {
     }
 
     private func handle(fd: Int32) {
-        defer { close(fd) }
-        guard let request = readRequest(fd: fd) else { return }
+        guard let request = readRequest(fd: fd) else {
+            close(fd)
+            return
+        }
         let method = request.method.uppercased()
         if method == "OPTIONS" {
-            writeAll(fd: fd, data: Self.corsPreflightResponse())
+            _ = foliaWriteAll(fd: fd, data: Self.corsPreflightResponse())
+            close(fd)
             return
         }
         if request.path.hasPrefix("/remote-audio/") {
             let token = String(request.path.dropFirst("/remote-audio/".count))
             if let target = remoteURL(for: token) {
-                respondRemoteAudio(fd: fd, method: method, target: target, token: token, headers: request.headers)
-            } else {
-                writeAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+                // 连接的所有权交给 relay，由它在 URLSession 完成/失败时关闭。
+                startRemoteRelay(fd: fd, method: method, target: target, token: token, headers: request.headers)
+                return
             }
+            _ = foliaWriteAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+            close(fd)
             return
         }
         guard request.path.hasPrefix("/audio/") else {
-            writeAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+            _ = foliaWriteAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+            close(fd)
             return
         }
         let token = String(request.path.dropFirst("/audio/".count)).removingPercentEncoding ?? String(request.path.dropFirst("/audio/".count))
         if token.hasPrefix("imported-") {
             guard !token.contains("/"), !token.contains("\\"), !token.contains("..") else {
-                writeAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+                _ = foliaWriteAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+                close(fd)
                 return
             }
             let fileURL = importedAudioDirectory().appendingPathComponent(token)
             respondFile(fd: fd, method: method, fileURL: fileURL, headers: request.headers)
+            close(fd)
             return
         }
-        writeAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+        _ = foliaWriteAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+        close(fd)
     }
 
     private func remoteURL(for token: String) -> String? {
@@ -223,7 +235,7 @@ final class FoliaLocalAudioServer {
     private func respondFile(fd: Int32, method: String, fileURL: URL, headers: [String: String]) {
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
               let size = attributes[.size] as? NSNumber, size.int64Value > 0 else {
-            writeAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+            _ = foliaWriteAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
             return
         }
         let total = size.int64Value
@@ -245,7 +257,7 @@ final class FoliaLocalAudioServer {
         }
         header += Self.corsHeaders
         header += "Connection: close\r\n\r\n"
-        guard writeAll(fd: fd, data: Data(header.utf8)) else { return }
+        guard foliaWriteAll(fd: fd, data: Data(header.utf8)) else { return }
         guard method == "GET" else { return }
         guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return }
         defer { try? handle.close() }
@@ -254,14 +266,15 @@ final class FoliaLocalAudioServer {
         while remaining > 0 {
             let chunk = try? handle.read(upToCount: Int(min(Int64(64 * 1024), remaining)))
             guard let chunk, !chunk.isEmpty else { break }
-            guard writeAll(fd: fd, data: chunk) else { return }
+            guard foliaWriteAll(fd: fd, data: chunk) else { return }
             remaining -= Int64(chunk.count)
         }
     }
 
-    private func respondRemoteAudio(fd: Int32, method: String, target: String, token: String, headers: [String: String]) {
+    private func startRemoteRelay(fd: Int32, method: String, target: String, token: String, headers: [String: String]) {
         guard let targetURL = URL(string: target) else {
-            writeAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+            _ = foliaWriteAll(fd: fd, data: Self.statusResponse(404, "Not Found"))
+            close(fd)
             return
         }
         var request = URLRequest(url: targetURL)
@@ -274,56 +287,8 @@ final class FoliaLocalAudioServer {
         if let range = headers["range"], range.hasPrefix("bytes=") {
             request.setValue(range, forHTTPHeaderField: "Range")
         }
-
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 60
-        let session = URLSession(configuration: configuration)
-        let semaphore = DispatchSemaphore(value: 0)
-        var resultData: Data?
-        var resultResponse: HTTPURLResponse?
-        session.dataTask(with: request) { data, response, _ in
-            resultData = data
-            resultResponse = response as? HTTPURLResponse
-            semaphore.signal()
-        }.resume()
-        _ = semaphore.wait(timeout: .now() + 50)
-        session.invalidateAndCancel()
-
-        guard let response = resultResponse, let data = resultData, (200...299).contains(response.statusCode) else {
-            writeAll(fd: fd, data: Self.statusResponse(502, "Upstream Error"))
-            return
-        }
-        let contentType = response.value(forHTTPHeaderField: "Content-Type") ?? "audio/mpeg"
-        let contentRange = response.value(forHTTPHeaderField: "Content-Range")
-        let isPartial = response.statusCode == 206 || contentRange != nil
-        var header = isPartial ? "HTTP/1.1 206 Partial Content\r\n" : "HTTP/1.1 200 OK\r\n"
-        header += "Content-Type: \(contentType)\r\n"
-        header += "Accept-Ranges: bytes\r\n"
-        header += "Content-Length: \(data.count)\r\n"
-        if let contentRange {
-            header += "Content-Range: \(contentRange)\r\n"
-        }
-        header += Self.corsHeaders
-        header += "Connection: close\r\n\r\n"
-        guard writeAll(fd: fd, data: Data(header.utf8)) else { return }
-        if method != "HEAD" {
-            _ = writeAll(fd: fd, data: data)
-        }
-    }
-
-    private func writeAll(fd: Int32, data: Data) -> Bool {
-        var sent = 0
-        let total = data.count
-        while sent < total {
-            let written = data.withUnsafeBytes { pointer -> Int in
-                let base = pointer.baseAddress!.advanced(by: sent)
-                return send(fd, base, total - sent, 0)
-            }
-            if written <= 0 { return false }
-            sent += written
-        }
-        return true
+        let relay = FoliaRemoteAudioRelay(fd: fd, isHead: method == "HEAD")
+        relay.start(request)
     }
 
     private static func parseRange(_ header: String?, total: Int64) -> (start: Int64, end: Int64)? {
@@ -392,4 +357,127 @@ final class FoliaLocalAudioServer {
             + "Connection: close\r\n\r\n"
         return Data(response.utf8)
     }
+}
+
+/// 逐块把上游音频写回本地 socket；首个响应头一到就先发出去，避免「点了没反应」。
+private final class FoliaRemoteAudioRelay: NSObject, URLSessionDataDelegate {
+    private let fd: Int32
+    private let isHead: Bool
+    private var session: URLSession?
+    private var headersSent = false
+    private var finished = false
+    private let finishLock = NSLock()
+
+    init(fd: Int32, isHead: Bool) {
+        self.fd = fd
+        self.isHead = isHead
+    }
+
+    func start(_ request: URLRequest) {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 3600
+        configuration.httpShouldSetCookies = false
+        configuration.httpCookieStorage = nil
+        let queue = OperationQueue()
+        queue.name = "top.izuna.foliamajor.audio.relay"
+        queue.maxConcurrentOperationCount = 1
+        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: queue)
+        self.session = session
+        session.dataTask(with: request).resume()
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            completionHandler(.cancel)
+            _ = foliaWriteAll(fd: fd, data: FoliaLocalAudioServerRelaySupport.statusResponse(502, "Upstream Error"))
+            finish()
+            return
+        }
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? "audio/mpeg"
+        let contentRange = http.value(forHTTPHeaderField: "Content-Range")
+        let isPartial = http.statusCode == 206 || contentRange != nil
+        var header = isPartial ? "HTTP/1.1 206 Partial Content\r\n" : "HTTP/1.1 200 OK\r\n"
+        header += "Content-Type: \(contentType)\r\n"
+        header += "Accept-Ranges: bytes\r\n"
+        if http.expectedContentLength >= 0 {
+            header += "Content-Length: \(http.expectedContentLength)\r\n"
+        }
+        if let contentRange {
+            header += "Content-Range: \(contentRange)\r\n"
+        }
+        header += FoliaLocalAudioServerRelaySupport.corsHeaders
+        header += "Connection: close\r\n\r\n"
+        guard foliaWriteAll(fd: fd, data: Data(header.utf8)) else {
+            completionHandler(.cancel)
+            finish()
+            return
+        }
+        headersSent = true
+        completionHandler(.allow)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard !isHead, !data.isEmpty else { return }
+        if !foliaWriteAll(fd: fd, data: data) {
+            session.invalidateAndCancel()
+            finish()
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if !headersSent && error != nil {
+            _ = foliaWriteAll(fd: fd, data: FoliaLocalAudioServerRelaySupport.statusResponse(502, "Upstream Error"))
+        }
+        finish()
+    }
+
+    private func finish() {
+        finishLock.lock()
+        if finished {
+            finishLock.unlock()
+            return
+        }
+        finished = true
+        finishLock.unlock()
+        close(fd)
+        session?.invalidateAndCancel()
+        session = nil
+    }
+}
+
+private enum FoliaLocalAudioServerRelaySupport {
+    static let corsHeaders =
+        "Access-Control-Allow-Origin: *\r\n"
+        + "Access-Control-Allow-Headers: range, content-range, content-length\r\n"
+        + "Access-Control-Expose-Headers: range, content-range, content-length, accept-ranges\r\n"
+
+    static func statusResponse(_ status: Int, _ reason: String) -> Data {
+        let response = "HTTP/1.1 \(status) \(reason)\r\n"
+            + "Content-Type: text/plain\r\n"
+            + "Content-Length: 0\r\n"
+            + corsHeaders
+            + "Connection: close\r\n\r\n"
+        return Data(response.utf8)
+    }
+}
+
+/// 写完整块到 socket；对端断开时返回 false。
+private func foliaWriteAll(fd: Int32, data: Data) -> Bool {
+    var sent = 0
+    let total = data.count
+    while sent < total {
+        let written = data.withUnsafeBytes { pointer -> Int in
+            let base = pointer.baseAddress!.advanced(by: sent)
+            return send(fd, base, total - sent, 0)
+        }
+        if written <= 0 { return false }
+        sent += written
+    }
+    return true
 }
