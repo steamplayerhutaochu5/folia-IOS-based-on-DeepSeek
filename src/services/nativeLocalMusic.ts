@@ -84,6 +84,21 @@ export const isAndroidNativeRuntime = (): boolean => (
     && (window as any).Capacitor?.getPlatform?.() === 'android'
 );
 
+/** iOS 容器：没有 MediaStore，但同样没有 File System Access API，导入走 Files 选择器。 */
+export const isIosNativeRuntime = (): boolean => (
+    typeof window !== 'undefined'
+    && (window as any).Capacitor?.getPlatform?.() === 'ios'
+);
+
+/**
+ * 两端原生容器共用同一套 FoliaNative 桥：
+ * 安卓走 SAF + MediaStore，iOS 走 UIDocumentPicker + 私有目录副本。
+ * 需要「原生可用」判断的调用方（目录选择、导入）用它，而不是只认 android。
+ */
+export const isNativeLocalMusicRuntime = (): boolean => (
+    isAndroidNativeRuntime() || isIosNativeRuntime()
+);
+
 const getPlugin = (): NativePlugin | null => (
     (window as any).Capacitor?.Plugins?.FoliaNative ?? null
 );

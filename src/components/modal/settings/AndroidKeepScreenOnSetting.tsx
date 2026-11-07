@@ -14,10 +14,14 @@ type AndroidKeepScreenOnSettingProps = {
     theme?: { secondaryColor?: string } | null;
 };
 
-const isAndroidNativeRuntime = (): boolean => (
-    typeof window !== 'undefined'
-    && (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.() === 'android'
-);
+// 屏幕常亮两端原生都支持：安卓用窗口标志，iOS 用 UIApplication.isIdleTimerDisabled。
+// 桌面与网页版没有这个开关（回退到 Screen Wake Lock）。
+const isNativeMobileRuntime = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const platform = (window as unknown as { Capacitor?: { getPlatform?: () => string } })
+        .Capacitor?.getPlatform?.();
+    return platform === 'android' || platform === 'ios';
+};
 
 const AndroidKeepScreenOnSetting: React.FC<AndroidKeepScreenOnSettingProps> = ({
     isDaylight,
@@ -28,7 +32,7 @@ const AndroidKeepScreenOnSetting: React.FC<AndroidKeepScreenOnSettingProps> = ({
     const enabled = useAndroidLayoutSettingsStore(state => state.keepScreenOnEnabled);
     const setEnabled = useAndroidLayoutSettingsStore(state => state.setKeepScreenOnEnabled);
 
-    if (!isAndroidNativeRuntime()) return null;
+    if (!isNativeMobileRuntime()) return null;
 
     const toggleOffBackgroundClass = isDaylight ? 'bg-zinc-200' : 'bg-[#2A2D35]';
 

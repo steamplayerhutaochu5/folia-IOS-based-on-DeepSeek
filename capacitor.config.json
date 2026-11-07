@@ -7,6 +7,13 @@
   "android": {
     "allowMixedContent": true
   },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "limitsNavigationsToAppBoundDomains": false,
+    "backgroundColor": "#09090b",
+    "appendUserAgent": "Folia-iOS"
+  },
   "server": {
     "androidScheme": "https",
     "hostname": "localhost",

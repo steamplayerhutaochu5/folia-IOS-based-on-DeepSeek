@@ -9,6 +9,7 @@ import { installFrameTimingDiagnostics } from './utils/frameTimingDiagnostics';
 import { installNativeAndroidBridge } from './services/nativeAndroidBridge';
 import { installAndroidPhoneFitPreference } from './services/androidPhoneLayout';
 import { installKeepScreenOnPreference } from './services/androidKeepScreenOn';
+import { installPlatformStatusBarStyle } from './services/nativeStatusBar';
 // import { installCoverSizeAudit } from './services/debug/coverSizeSamples';
 // @ts-ignore
 globalThis.Buffer = Buffer;
@@ -35,6 +36,9 @@ installGlobalVisualizerFrameRateLimiter();
 installAndroidPhoneFitPreference();
 // 屏幕常亮：启动时套用保存的开关状态（安卓走原生窗口标志）。
 installKeepScreenOnPreference();
+// iOS 的状态栏样式与 Android 的 LIGHT/DARK 语义相反，启动时单独校正。
+installPlatformStatusBarStyle();
+// 原生桥在 Android/iOS 共用同一套协议；iOS 侧由 FoliaNativePlugin 提供同名插件。
 void installNativeAndroidBridge();
 
 void import('./bootstrap');
