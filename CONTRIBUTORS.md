@@ -1,5 +1,16 @@
 # 贡献者
 
+## 本 iOS 移植
+
+| 角色 | 贡献者 |
+| --- | --- |
+| iOS 移植维护、构建流水线与真机测试 | [@steamplayerhutaochu5](https://github.com/steamplayerhutaochu5) |
+| 上游 Folia（Web 前端、播放器、歌词与桌面端） | [@chthollyphile](https://github.com/chthollyphile) 及上游贡献者 |
+| Android 容器与 `FoliaNative` 桥协议 | [@whycfawa](https://github.com/whycfawa) 及 folia-android 贡献者 |
+| 代码实现协助 | DeepSeek（AI 编码工具，不计入人类贡献者） |
+
+> 下方名单是上游 Folia 的 all-contributors 记录，保留用于尊重上游作者与贡献者；它统计的不是本 iOS fork 的独立贡献。
+
 Thanks goes to these wonderful people. Issue reports, bug reports, ideas, docs, design, tests, and code are all counted through the [all-contributors](https://allcontributors.org/) spec.
 
 <!-- ALL-CONTRIBUTORS-LIST:START -->

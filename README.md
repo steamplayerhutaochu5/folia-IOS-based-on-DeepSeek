@@ -218,6 +218,17 @@ npm run typecheck         # TypeScript 类型检查
 - 调整音频会话配置时机（播放前配置、播放中不重配），解决播放几秒后自动暂停；
 - 后台/息屏时重申音频会话（续播能力持续验证中）。
 
+## 贡献者
+
+本 iOS 移植由 [@steamplayerhutaochu5](https://github.com/steamplayerhutaochu5) 维护，构建流水线与真机测试由其完成；
+代码实现过程中使用了 DeepSeek 作为 AI 编码协助（工具，不计入人类贡献者）。
+
+- 上游 Folia：[chthollyphile](https://github.com/chthollyphile)（冬霧）及上游贡献者
+- Android 移植：[whycfawa](https://github.com/whycfawa) 及 folia-android 贡献者
+- iOS 移植与发行：[steamplayerhutaochu5](https://github.com/steamplayerhutaochu5)
+
+完整名单与各角色说明见 [CONTRIBUTORS.md](CONTRIBUTORS.md)。
+
 ## Community
 
 加入 Discord 社群交流与反馈：
