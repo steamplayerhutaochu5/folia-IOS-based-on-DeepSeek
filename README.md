@@ -216,7 +216,8 @@ npm run typecheck         # TypeScript 类型检查
 - 修复音频连接被 WebView 提前关闭时写 socket 触发 SIGPIPE 的闪退；
 - 修复 `AVAudioSession`/AudioContext 被中断后「有缓冲但无声、进度不走」；
 - 调整音频会话配置时机（播放前配置、播放中不重配），解决播放几秒后自动暂停；
-- 后台/息屏时重申音频会话（续播能力持续验证中）。
+- 后台/息屏时重申音频会话（续播能力持续验证中）；
+- 修复酷狗音频直连 CDN 导致的 `MEDIA_ERR_SRC_NOT_SUPPORTED`：酷狗播放地址统一走本地回环代理，并补齐酷狗 Referer。
 
 ## 贡献者
 

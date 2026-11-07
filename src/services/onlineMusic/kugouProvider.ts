@@ -28,6 +28,7 @@ import {
 import { removeProviderSessionValue, readProviderSessionValue } from './providerStorage';
 import { noteLibraryStep } from '../../nativeBridge/api/libraryTrace.js';
 import { attemptChainDecision, attemptFromError, emptyAttempt, summarizePlaybackAttempts } from './playbackAttempts';
+import { proxyNativeRemoteAudioUrl } from '../nativeRemoteAudio';
 import {
     getKugouTransportAvailability,
     hasKugouAuthenticatedSearchSession,
@@ -1215,8 +1216,9 @@ export const kugouProvider: OnlineMusicProvider = {
                                 quality: candidateQuality,
                             });
                             return {
-                                // Preserve the upstream candidate here; the shared playback transport normalizes its scheme.
-                                url,
+                                // 酷狗 CDN 不像网易云那样带 CORS 头，<audio crossOrigin="anonymous">
+                                // 直连会以 MEDIA_ERR_SRC_NOT_SUPPORTED 失败；原生容器里统一走本地回环代理。
+                                url: await proxyNativeRemoteAudioUrl(url),
                                 fetchedAt: Date.now(),
                                 quality: candidateQuality,
                                 ...(replayGain ? { replayGain } : {}),
@@ -1291,7 +1293,7 @@ export const kugouProvider: OnlineMusicProvider = {
                             requestedQuality: quality,
                         });
                         return {
-                            url: legacyUrl,
+                            url: await proxyNativeRemoteAudioUrl(legacyUrl),
                             fetchedAt: Date.now(),
                             quality: 'standard',
                         };

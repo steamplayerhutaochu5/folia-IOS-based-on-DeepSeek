@@ -25,7 +25,7 @@ final class FoliaLocalAudioServer {
     private let acceptQueue = DispatchQueue(label: "top.izuna.foliamajor.audio.accept")
     private let connectionQueue = DispatchQueue(label: "top.izuna.foliamajor.audio.conn", attributes: .concurrent)
 
-    private static let remoteHostSuffixes = ["kuwo.cn", "music.126.net"]
+    private static let remoteHostSuffixes = ["kuwo.cn", "music.126.net", "kugou.com"]
     private static let remoteUserAgent =
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 
@@ -322,6 +322,9 @@ final class FoliaLocalAudioServer {
         let host = (url.host ?? "").lowercased()
         if host == "music.126.net" || host.hasSuffix(".music.126.net") {
             return "https://music.163.com/"
+        }
+        if host == "kugou.com" || host.hasSuffix(".kugou.com") {
+            return "https://www.kugou.com/"
         }
         return "https://www.kuwo.cn/"
     }

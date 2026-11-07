@@ -59,7 +59,7 @@ final class LocalAudioServer {
      * 它的 CDN 不下发 CORS 头，而 <audio> 带 crossOrigin="anonymous"，
      * 于是播放被同源策略挡掉（表现是 MEDIA_ELEMENT_ERROR: Format error）。
      */
-    private static final String[] REMOTE_AUDIO_HOST_SUFFIXES = { "kuwo.cn", "music.126.net" };
+    private static final String[] REMOTE_AUDIO_HOST_SUFFIXES = { "kuwo.cn", "music.126.net", "kugou.com" };
     private static final String REMOTE_AUDIO_USER_AGENT =
         "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36";
     private static final String REMOTE_AUDIO_REFERER = "https://www.kuwo.cn/";
@@ -156,6 +156,9 @@ final class LocalAudioServer {
             String host = new URL(value).getHost();
             if (host != null && (host.equals("music.126.net") || host.endsWith(".music.126.net"))) {
                 return NETEASE_REMOTE_AUDIO_REFERER;
+            }
+            if (host != null && (host.equals("kugou.com") || host.endsWith(".kugou.com"))) {
+                return "https://www.kugou.com/";
             }
         } catch (Exception ignored) {
             return REMOTE_AUDIO_REFERER;
