@@ -209,8 +209,8 @@ final class FoliaLocalAudioServer {
         var headers: [String: String] = [:]
         for line in lines.dropFirst() {
             guard let separator = line.firstIndex(of: ":") else { continue }
-            let name = line[..<separator].trimmingCharacters(in: .whitespaces).lowercased()
-            let value = line[line.index(after: separator)...].trimmingCharacters(in: .whitespaces)
+            let name = String(line[..<separator]).trimmingCharacters(in: .whitespaces).lowercased()
+            let value = String(line[line.index(after: separator)...]).trimmingCharacters(in: .whitespaces)
             headers[name] = value
         }
         var path = String(parts[1])

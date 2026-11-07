@@ -18,5 +18,16 @@ class FoliaBridgeViewController: CAPBridgeViewController {
         webView?.backgroundColor = UIColor(red: 9.0 / 255.0, green: 9.0 / 255.0, blue: 11.0 / 255.0, alpha: 1.0)
         webView?.scrollView.backgroundColor = webView?.backgroundColor
         webView?.scrollView.bounces = true
+        // App 背景固定 #09090b，状态栏用浅色文字；StatusBar 插件会按全局配置再设一次，
+        // 这里与 viewDidAppear 一起兜底，避免因插件通知时序变成深色文字。
+        statusBarStyle = .lightContent
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // super 里的 StatusBar 插件会把样式改成配置值（iOS 的 LIGHT = 深色文字），
+        // 在深色背景上不可见；这里在插件之后覆盖回浅色。
+        statusBarStyle = .lightContent
+        setNeedsStatusBarAppearanceUpdate()
     }
 }
