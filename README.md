@@ -3,223 +3,203 @@
 </p>
 
 <div align="center">
-<a href="https://trendshift.io/repositories/71740?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-71740" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/71740" alt="chthollyphile%2Ffolia-major | Trendshift" width="250" height="55"/></a>
 
-# Folia for Android
+# Folia for iOS
 
-Lyrics Reimagined // 辞曲新境
+Lyrics Reimagined // 辞曲新境 · iOS 非官方移植
 
-[![GitHub release](https://img.shields.io/github/v/release/chthollyphile/folia-major?label=release)](https://github.com/chthollyphile/folia-major/releases)
 [![License](https://img.shields.io/github/license/chthollyphile/folia-major)](https://github.com/chthollyphile/folia-major/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/chthollyphile/folia-major?style=social)](https://github.com/chthollyphile/folia-major/stargazers)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/chthollyphile/folia-major)
-[![Discord](https://img.shields.io/discord/1541051241822687232?logo=discord&logoColor=white&label=Join%20our%20Discord)](https://discord.gg/dMDBTHxeKd)
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-35-orange.svg?style=flat-square)](CONTRIBUTORS.md)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
+[![iOS](https://img.shields.io/badge/iOS-15%2B%20%C2%B7%20tested%20on%2027-000000?logo=apple&logoColor=white)](#)
+[![Build](https://img.shields.io/badge/build-GitHub%20Actions%20%C2%B7%20unsigned%20ipa-2088FF?logo=githubactions&logoColor=white)](.github/workflows/ios-ipa.yml)
 
-[获取方式](https://github.com/chthollyphile/folia-major#%E8%8E%B7%E5%8F%96%E6%96%B9%E5%BC%8F)
+[项目定位](#项目定位)
 ·
-[Vercel 部署](https://vercel.com/new/clone?repository-url=https://github.com/chthollyphile/folia-major)
+[功能状态](#功能状态)
 ·
-[使用指南](https://folia-site.cielaniska.top/guide/)
+[构建与安装](#构建与安装)
 ·
-[技术说明](docs/technical.md)
+[开发说明](#开发说明)
+·
+[已知限制](#已知限制)
+·
+[免责声明](#法律与免责声明)
 
 </div>
 
 ---
 
 > [!IMPORTANT]
-> **本仓库是 Folia 的非官方 Android 移植 fork，与上游作者无关。**
+> **本仓库是 Folia 的非官方 iOS 移植 fork，与上游作者无关。**
 >
 > - 上游项目：[chthollyphile/folia-major](https://github.com/chthollyphile/folia-major)
 > - 上游许可证：**AGPL-3.0**（见 [LICENSE](LICENSE)）
-> - 本 fork 基于上游 `0.7.15` 修改而来，新增 Capacitor Android 容器、内置平台桥、后台播放前台服务、锁屏媒体控制与本地音乐等功能，
->   改动说明与构建步骤见 [ANDROID_PORT.md](ANDROID_PORT.md)
-> - 本仓库整体仍以 **AGPL-3.0** 发布，许可证未作任何修改或附加限制；第三方组件与许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
+> - 本 fork 从 [whycfawa/folia-android](https://github.com/whycfawa/folia-android)（Folia 的非官方 Android 移植）继续派生，
+>   在其内置的 Web 前端与 `FoliaNative` 桥协议之上新增 Capacitor iOS 容器、Swift 原生实现与未签名 ipa 构建流水线
+> - 本仓库整体仍以 **AGPL-3.0** 发布，许可证未作修改或附加限制；第三方组件与许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
 > - 上游 README 中「仅供个人学习、技术交流与非营利测试使用，请勿用于商业盈利用途」的声明同样适用于本 fork
 
-## 项目简介
+## 项目定位
 
-Folia for Android 基于原项目web版本移植做了基础功能功能要求和bug反馈去q群975075968
+Folia 是一个以全屏沉浸式歌词为核心的在线音乐播放器，支持网易云、QQ 音乐、酷狗、Navidrome 与本地音乐。
+本项目把它的 Web 前端装进 Capacitor 的 iOS 容器，并补齐 iOS 缺失的原生能力，让它在 iPhone / iPad 上可以像普通 App 一样安装使用。
 
-## 快速下载
+与「用 Safari 把网页添加到主屏幕」的 PWA 方式相比，iOS 版多做了这些事：
 
-> [!TIP]
-> - **GitHub**：[Latest Release](https://github.com/chthollyphile/folia-major/releases/latest)，提供 Windows / macOS / Linux 全平台安装包。
-> - **网盘**：[夸克网盘](https://pan.quark.cn/s/6e4c6fa3bc6f) · [百度云](https://pan.baidu.com/s/1f0x3g-8PMcNCO-TJ5z1rPw?pwd=flia)（提取码 `flia`），适合国内网络，仅提供 Windows 与 Apple silicon 的正式版安装包。
->
-> 更多获取方式（Web 部署、Docker、AUR、Flatpak）见下方 [获取方式](#获取方式)。
+- **绕开 CORS 的网络层**：在线音乐 API、封面、歌词请求全部交给原生 `URLSession`，不再受 WKWebView 的同源策略限制；
+- **原生 Cookie 仓库**：网易云 / QQ / 酷狗的登录态在 `FoliaCookieJar` 中持久化，并镜像到 `WKHTTPCookieStore`；
+- **Files 导入本地音乐**：通过系统文件选择器把音频复制进 App 私有目录，再由本地 HTTP 服务以支持 Range 的方式喂给 `<audio>`；
+- **锁屏与控制中心**：`MPNowPlayingInfoCenter` + `MPRemoteCommandCenter` 显示歌曲信息并响应播放/暂停/上一首/下一首；
+- **未签名 ipa 云构建**：由 GitHub Actions 的 macOS runner 编译，产物下载后自行签名安装，不依赖本地 Mac。
 
-## 展示
+> 构建细节、方法映射与限制清单见 [docs/IOS_PORT.md](docs/IOS_PORT.md)。
 
-![visualizer](./img/visualizer.png)
+## 架构
 
-### 演示视频
+```text
+React/Vite 前端（来自 folia-android，src/ 原样复用）
+  │  window.Capacitor.Plugins.FoliaNative（与 Android 同名、同协议）
+  ▼
+FoliaNativePlugin.swift
+  ├── FoliaCookieJar        Cookie 持久化 + WKHTTPCookieStore 镜像
+  ├── URLSession            httpRequest：Cookie 注入、超时、可选禁重定向、Set-Cookie 回写
+  ├── UIDocumentPicker      pickAudioFiles / pickAudioFolder → Documents/imported-audio
+  ├── FoliaLocalAudioServer 127.0.0.1 HTTP 服务：Range / HEAD / OPTIONS / CORS
+  ├── FoliaMediaSession     AVAudioSession + Now Playing + 远程控制
+  └── FoliaDiagnostics      Documents/diagnostics 诊断落盘
+```
 
-https://github.com/user-attachments/assets/af806cf1-f67f-4b88-b2e7-57db507e9e81
+## 功能状态
 
-https://github.com/user-attachments/assets/fd27f4f0-64b9-4c57-8c3b-10df767f934b
+| 能力 | 状态 | 说明 |
+| --- | --- | --- |
+| 在线搜索与播放 | ✅ | 网易云 / QQ / 酷狗，网络请求走原生桥 |
+| 扫码 / 网页登录 | ✅ | Cookie 保存在原生仓库 |
+| 全屏歌词与动画 | ✅ | 复用 Web 端可视化；iOS 内存上限需实测 |
+| 本地音乐（Files 导入） | ✅ | 文件复制进 App 私有目录，通过本地 HTTP 播放 |
+| 屏幕常亮 | ✅ | `UIApplication.isIdleTimerDisabled` |
+| 锁屏 / 控制中心 | ✅ | 元数据 + 播放/暂停/上一首/下一首 |
+| 后台播放 | ⚠️ | 已配置 `UIBackgroundModes: audio`，真机续播能力待验证 |
+| 设备音乐库扫描 | ❌ | iOS 没有 Android MediaStore 的等价能力 |
+| 手机适配 / 沉浸式 / 灵动岛歌词 | ❌ | Android 窗口特性，iOS 侧不适用 |
+| 未签名 ipa 构建 | ✅ | GitHub Actions `macos-26` / `xcode-27` |
 
-https://github.com/user-attachments/assets/704f195a-2194-434b-86e8-8f36290e5cc4
+## 构建与安装
 
-### 部分主题预览
+### 1. 云端构建（推荐，无需 Mac）
 
-<table>
-  <tr>
-    <td width="50%">
-      <img src="./img/preview-fume.png" alt="Fume 主题预览" />
-    </td>
-    <td width="50%">
-      <img src="./img/preview-lumi.png" alt="Lumi 主题预览" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>浮名</strong></td>
-    <td align="center"><strong>流光</strong></td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <img src="./img/preview-cad.png" alt="Cad 主题预览" />
-    </td>
-    <td width="50%">
-      <img src="./img/preview-pat.png" alt="Pat 主题预览" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>心象</strong></td>
-    <td align="center"><strong>云阶</strong></td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <img src="./img/preview-cappella.jpg" alt="群唱 主题预览" />
-    </td>
-    <td width="50%">
-      <img src="./img/preview-tilt.png" alt="Tilt 主题预览" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>群唱</strong></td>
-    <td align="center"><strong>倾诉</strong></td>
-  </tr>
-    <tr>
-    <td width="50%">
-      <img src="./img/preview-diorama.png" alt="镜台 主题预览" />
-    </td>
-    <td width="50%">
-      <img src="./img/preview-pendolo.png" alt="时计 主题预览" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>镜台</strong></td>
-    <td align="center"><strong>时计</strong></td>
-  </tr>
-</table>
+推送代码后，在 GitHub Actions 页面运行 **iOS unsigned IPA**：
 
-不同的歌词动画具有不同的排版氛围和可调参数，让全屏歌词拥有如同文字PV般的丰富视觉效果，同时又能兼顾响应式布局，自动适配不同窗口尺寸。
+- runner 可选 `macos-26`（Xcode 26 GA，稳定）或 `xcode-27`（preview，iOS 27 SDK）；
+- 构建产物 `Folia-unsigned.ipa` 以 artifact 形式提供，保留 30 天；
+- 工作流定义：[.github/workflows/ios-ipa.yml](.github/workflows/ios-ipa.yml)。
 
-## 核心能力
+本仓库的 `main` 分支已经配置好该工作流，也可以手动触发：
 
-| 模块 | 说明 |
-| --- | --- |
-| 在线搜索与播放 | 搜索歌曲、歌手或专辑后即可播放，并自动加载相关封面与歌词。 |
-| 本地音乐支持 | 可导入本地音频文件，在本地安全保存索引信息，不上传文件内容。详细用法见 [本地音乐库管理](docs/local-library-management.md)。 |
-| 智能歌词匹配 | 本地歌曲可自动匹配在线歌词与封面，也支持手动修正匹配结果。 |
-| 本地歌词文件识别 | 自动加载同目录同名 `.lrc`、`.vtt`、`.ttml`、`.qrc`、`.yrc`、`.krc` 歌词文件，或歌词文件内嵌 LRC 歌词。适配 LDDC 生成的增强型逐字歌词格式。 |
-| Now Playing 接入 | 支持通过本机 [Now Playing](https://github.com/Widdit/now-playing-service/) 服务接入外部播放器的歌曲、时间轴与歌词信息，并驱动 Folia 的舞台视图与全屏歌词渲染。 |
-| AI 主题生成 | 基于歌曲情绪与歌词内容生成沉浸式背景与视觉参数。 |
-| 多端体验 | 提供 Web 部署方式，同时支持桌面端打包分发。 |
-| 模组系统（实验性） | 桌面版可通过 Folium 模组添加歌词动画、背景、播放页图层、命令等，并从 [模组市场](https://folium-compound.cielaniska.top) 安装官方认证的模组。详见 [模组系统](#模组系统folium-v1x)。 |
+```text
+Actions → iOS unsigned IPA → Run workflow
+```
 
-## 获取方式
+### 2. 本地 macOS 构建
 
-桌面版内置前后端运行环境，适合希望即装即用的用户。
+```bash
+npm ci
+npm run build:capacitor
+npx cap sync ios
+npx cap open ios        # 在 Xcode 中配置签名后 Run
+```
 
-### 一键部署
+命令行未签名打包：
 
-如果你希望快速上线 Web 版本，请阅读 [Vercel 一键部署指南](https://folia-site.cielaniska.top/guide/deploy-vercel) 来创建项目
+```bash
+npm run build:ios:archive
+mkdir -p build/Payload
+cp -R build/App.xcarchive/Products/Applications/App.app build/Payload/
+cd build && zip -qry Folia-unsigned.ipa Payload
+```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/chthollyphile/folia-major) 
+### 3. 安装到 iPhone / iPad
 
-项目也支持一键部署到 Cloudflare，请参考 Vercel 的部署教程进行相应调整。
+未签名 ipa 不能直接安装，必须签名。免费 Apple ID 方案：
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/chthollyphile/folia-major)
+1. Windows 安装 [Sideloadly](https://sideloadly.io/) 或 AltStore，并准备 Apple ID；
+2. 用 USB 连接设备，把 `Folia-unsigned.ipa` 拖进 Sideloadly；
+3. 输入 Apple ID 签名并安装（bundle id：`top.izuna.foliamajor`）；
+4. iPhone：设置 → 通用 → VPN 与设备管理 → 信任开发者证书；
+5. 设置 → 隐私与安全性 → 开发者模式 → 打开并重启。
 
-Vercel 与 Cloudflare 上的 QQ 音乐不再需要额外部署一个常驻 API 实例：把 `VITE_QQ_API_BASE` 填成 `/api/qq`，再配一个 `QQ_SESSION_SECRET`（服务端密钥，**不加 `VITE_` 前缀**）即可。这种形态默认只支持微信扫码登录，且播放前必须先登录；Cloudflare 上可以再绑定一个 Durable Object，增加 QQ 扫码登录方式。完整步骤、平台差异和排错方法见 [QQ 音乐部署指南](docs/qq-music-deployment.md)。
+免费证书 7 天有效，到期需要重新签名；付费开发者账号可延长到 1 年。
+若使用付费证书，也可以直接在 Xcode 的 `Signing & Capabilities` 里选择 Team 后安装到真机。
 
-自托管用户可以使用 [Docker Compose 全栈部署](deploy/docker/README.md)。本地音乐目录访问依赖可信 HTTPS 安全上下文，部署文档包含 NAS 反向代理和证书要求。
+## 开发说明
 
-关于移动端：
+### 目录
 
-目前推荐移动端用户部署 Web 版本/自托管版本之后，通过chrome for android / iOS Safari 创建 PWA应用（也就是将网页应用添加到桌面，Folia web版本支持安装为PWA应用）来使用。
+```text
+ios/
+  App/App.xcodeproj/          Xcode 工程（SPM，共享 scheme App）
+  App/App/
+    AppDelegate.swift         模板入口
+    SceneDelegate.swift       UIScene 生命周期
+    FoliaBridgeViewController.swift  插件注册 / 状态栏 / WebView 配置
+    FoliaNativePlugin.swift   FoliaNative 插件实现
+    FoliaCookieJar.swift      Cookie 仓库
+    FoliaLocalAudioServer.swift       本地音频 HTTP 服务
+    FoliaMediaSession.swift   锁屏 / 控制中心
+    FoliaDiagnostics.swift    诊断落盘
+  App/CapApp-SPM/             Capacitor 的 SPM 依赖（由 CLI 生成）
+src/services/                 前端平台适配（原生桥、本地音乐、状态栏）
+.github/workflows/ios-ipa.yml 未签名 ipa 构建
+docs/IOS_PORT.md              iOS 移植说明
+```
 
-有一定技术的用户可以使用 capacitor 将本项目的web版本打包成为可安装的安卓apk，具体方法可参考示范仓库：[chthollyphile/folia-sonnet](https://github.com/chthollyphile/folia-sonnet)
+### 常用命令
 
-本 fork 同时提供 Capacitor iOS 容器：由 GitHub Actions 在 macOS 上构建**未签名 ipa**，下载后需自行用 Sideloadly / AltStore / Xcode 签名安装到 iOS 15+（含 iOS 27）真机。构建方式、已实现能力与 iOS 限制见 [docs/IOS_PORT.md](docs/IOS_PORT.md)。
+```bash
+npm run build:capacitor   # 构建 Web 产物（FOLIA_BUILD_TARGET=capacitor）
+npm run cap:sync:ios      # 构建 + 同步到 iOS 工程
+npm run cap:open:ios      # 用 Xcode 打开工程
+npm run build:ios:archive # 未签名 archive（仅 macOS）
+npm run typecheck         # TypeScript 类型检查
+```
 
-### 直接下载
+### 约定
 
-- **Windows / macOS / Linux**: 最新版本的安装包请前往 [Releases 页面](https://github.com/chthollyphile/folia-major/releases/latest) 下载。
-- **Arch Linux**: 可通过 AUR 获取 [folia-major-bin](https://aur.archlinux.org/packages/folia-major-bin)。
-- **Flatpak**: 社区提供的第三方 flatpak，详情见 [Flatpark](https://flatpark.org/apps/top.izuna.foliamajor/)。
+- 新增原生能力时，先对齐 Android 的 `FoliaNativePlugin` 方法名与返回结构，再实现 Swift 侧；
+- Swift 方法需要 `@objc`，并同时登记到 `pluginMethods`；
+- 自定义插件不在 `node_modules`，由 `FoliaBridgeViewController.capacitorDidLoad()` 显式注册；
+- 新增 Swift 文件时，需要同时更新 `project.pbxproj` 的 `PBXBuildFile`、`PBXFileReference`、`PBXGroup`、`PBXSourcesBuildPhase`。
 
-> [!IMPORTANT]
-> 如果国内网络从 GitHub Releases 下载较慢，可以使用 [夸克网盘](https://pan.quark.cn/s/6e4c6fa3bc6f) 或 [百度云](https://pan.baidu.com/s/1f0x3g-8PMcNCO-TJ5z1rPw?pwd=flia) 下载。网盘链接仅提供 Windows 与 Apple silicon 的正式版安装包.
+## 已知限制
 
-Linux 包、Wayland / Hyprland 遥控窗和桌面端细节见 [技术与开发说明](docs/technical.md)。
-
-## 文档与开发
-
-更完整的使用说明请访问 [Folia Guide](https://folia-site.cielaniska.top/guide/)。
-
-部署、环境变量、本地开发、Stage API、常用脚本和技术栈见 [技术与开发说明](docs/technical.md)。
-
-## 模组系统（Folium v1.x）
-
-> [!NOTE]
-> 模组系统是实验性功能，仅桌面版可用，默认关闭，需要在「设置 → 实验室 → 模组系统」中开启。
-
-Folium 是 Folia 的模组平台。模组可以添加新的歌词动画模式和背景类型、在播放页上叠加内容、给进度条加按钮和标记、注册命令与设置分区、在歌词显示前改写歌词，也可以通过 Node 入口调用 ffmpeg 等本地能力。模组以可信代码运行，每个模组在启用前都要在原生窗口中确认，文件变化后需要重新确认。
-
-- **模组市场**：[folium-compound.cielaniska.top](https://folium-compound.cielaniska.top) 提供官方模组和经过审查的社区模组，下载 zip 后拖进模组面板即可安装。
-- **官方认证**：市场里的模组都带有 Folium 签名，安装后显示「官方认证」；只通过安全审查的先行测试模组显示「先行测试」；没有签名的第三方模组显示「未验证」，同样可以使用。
-- **开发与贡献**：[模组开发与贡献指南](docs/folium/contributing.md)，从写第一个模组、本地调试，到提交到模组市场、审查与签名、发布更新。
-- **API 参考**：[Folium API 参考](docs/folium/api.md)，由契约文件生成的完整接口文档，按注册表、上下文、事件、服务等分类查询。
-- **平台规范**：[Folium 规范](mods/README.md)，包括清单字段、权限、注册表语义、事件、安全模型与版本策略。
-- **示范模组**：仓库的 [`mods/`](mods/) 目录，覆盖歌词动画、调参、进度条、播放页图层与透明视频导出。
-
-## Sync Server
-
-Folia 提供了可选的官方同步服务端 `sync-server`，用于在多个设备之间同步外观设置与 AI 主题库。服务端由用户自行托管，适合希望跨设备同步配色主题的用户。
-
-支持以下部署方式：
-
-- **Cloudflare Workers / D1**：免服务器运维的 Serverless 部署，推荐使用。
-  [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/chthollyphile/folia-major/tree/main/sync-server)
-- **Docker**：镜像与 Compose 入口见 [Docker 部署目录](deploy/docker/README.md)。
-- **Node.js 自托管**：使用 SQLite，适合本地或不方便使用 Docker 的环境。
-
-详细的环境变量、Token 配置与部署步骤请参阅 [Sync-Server 部署指南](https://folia-site.cielaniska.top/guide/deploy-sync)。部署完成后，在 Folia 的“存储设置”中填写服务端地址和 `SYNC_TOKEN` 即可启用同步。
-
-## 本地音乐与匹配说明
-
-Folia 会读取音频文件元数据、同目录歌词和封面，并可通过网易云、QQ 音乐或酷狗音乐补全歌曲信息。自动匹配按网易云、QQ、酷狗依次回退；匹配不准确时，可以手动选择候选、恢复首次导入的本地信息，或进一步合并、拆分艺术家与专辑实体。
-
-完整的导入、重扫、匹配、实体编辑、歌单、缓存和故障排查说明见 [本地音乐库管理](docs/local-library-management.md)。
+- **后台播放**：WKWebView 的音频在 App 进入后台后可能被系统挂起；当前配置了后台音频模式，但是否续播需要真机验证。若失败，后续需要增加原生 `AVPlayer` 播放通道。
+- **本地音频跨源**：页面源是 `capacitor://localhost`，`<audio>` 请求 `http://127.0.0.1:<port>` 属于跨源，服务端已返回 `Access-Control-Allow-Origin: *`，`Info.plist` 已允许本地网络；若 iOS 27 收紧策略需要另做方案。
+- **内存**：iOS 的 WKWebView 内存上限低于桌面，部分 3D 可视化主题可能触顶崩溃，需要按崩溃日志做视觉降级。
+- **设备音乐库**：iOS 不支持扫描系统音乐库，本地音乐只能通过「文件」App 导入。
+- **分发**：第三方音乐接口与内容版权风险由使用者承担，不建议也不能上架 App Store。
 
 ## Community
 
-加入discord社群，共同交流，获得帮助
+加入 Discord 社群交流与反馈：
 
 [![Discord](https://img.shields.io/discord/1541051241822687232?logo=discord&logoColor=white&label=Join%20our%20Discord)](https://discord.gg/dMDBTHxeKd)
 
-## 贡献者
+上游文档与使用指南：[Folia Guide](https://folia-site.cielaniska.top/guide/) ·
+[技术与开发说明](docs/technical.md) ·
+[本地音乐库管理](docs/local-library-management.md)
 
-感谢所有为本项目进行 Issue 提交、Bug 报告、想法建议、测试与代码编写的贡献者，均依据 all-contributors 规范进行统计
+## 致谢
 
-由于列表过长，贡献记录请见 [贡献者名单](CONTRIBUTORS.md)。
+本项目建立在上游与 Android 移植的工作之上：
+
+- [chthollyphile/folia-major](https://github.com/chthollyphile/folia-major) — Folia 上游
+- [whycfawa/folia-android](https://github.com/whycfawa/folia-android) — Android 容器与 `FoliaNative` 桥协议
+- [chenmozhijin/LDDC](https://github.com/chenmozhijin/LDDC)
+- [NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)
+- [chenglou/pretext](https://github.com/chenglou/pretext)
+- [MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
+- [paper-design/shaders](https://github.com/paper-design/shaders)
+- [yakult-green-tea/qq-music-api](https://github.com/yakult-green-tea/qq-music-api)
 
 ## 法律与免责声明
 
@@ -230,19 +210,6 @@ Folia 会读取音频文件元数据、同目录歌词和封面，并可通过�
 本仓库及其源代码仅供个人学习、技术交流与非营利测试使用。请勿将其用于商业盈利用途。若因对在线资源的传播、加工或再分发而引发版权纠纷或其他责任，均由使用者自行承担，项目开发者不承担相关责任。
 
 请始终尊重数字版权，并在条件允许时通过官方平台支持正版音乐。
-
-## 致谢
-
-特别感谢以下项目和资源：
-
-- [chenmozhijin/LDDC](https://github.com/chenmozhijin/LDDC)
-- [NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)
-- [chenglou/pretext](https://github.com/chenglou/pretext)
-- [MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
-- [paper-design/shaders](https://github.com/paper-design/shaders)
-- [yakult-green-tea/qq-music-api](https://github.com/yakult-green-tea/qq-music-api)
-
-本项目接入了 [Apple Music-like Lyrics TTML 逐词歌词库](https://github.com/amll-dev/amll-ttml-db) 以提供高质量的歌词文件，感谢此歌词库的作者和贡献者们。
 
 ## 许可证
 
